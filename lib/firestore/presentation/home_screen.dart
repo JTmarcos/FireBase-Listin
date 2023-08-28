@@ -1,4 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebasetest/authentication/components/show_password_confirmation.dart';
+import 'package:firebasetest/authentication/services/auth_service.dart';
 import 'package:firebasetest/firestore_produtos/presentation/produto_screen.dart';
 
 import 'package:flutter/material.dart';
@@ -13,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String uid = FirebaseAuth.instance.currentUser!.uid;
   List<Listin> listListins = [];
   FirebaseFirestore firestore = FirebaseFirestore.instance;
 
@@ -25,6 +29,47 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            UserAccountsDrawerHeader(
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Center(
+                    child:
+                        FirebaseAuth.instance.currentUser!.displayName != null
+                            ? Text(FirebaseAuth
+                                .instance.currentUser!.displayName![0]
+                                .toUpperCase())
+                            : const Text(""),
+                  ),
+                ),
+                accountName:
+                    FirebaseAuth.instance.currentUser!.displayName != null
+                        ? Text(FirebaseAuth.instance.currentUser!.displayName!)
+                        : const Text(""),
+                accountEmail: Text(FirebaseAuth.instance.currentUser!.email!)),
+            ListTile(
+              leading: const Icon(
+                Icons.delete,
+                color: Colors.red,
+              ),
+              title: const Text("Excluir conta"),
+              onTap: () {
+                Navigator.pop(context);
+                showPasswordConfirmationDialog(context: context, email: "");
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text("Sair"),
+              onTap: () {
+                AuthService().logout();
+              },
+            )
+          ],
+        ),
+      ),
       appBar: AppBar(
         title: const Text("Listin - Feira Colaborativa"),
       ),
@@ -45,7 +90,10 @@ class _HomeScreenState extends State<HomeScreen> {
           : RefreshIndicator(
               onRefresh: () => refresh(),
               child: ListView.separated(
-                separatorBuilder: (context, index) => const Divider(color: Colors.black,thickness: 1,),
+                separatorBuilder: (context, index) => const Divider(
+                  color: Colors.black,
+                  thickness: 1,
+                ),
                 itemCount: listListins.length,
                 itemBuilder: (BuildContext context, int index) {
                   return Dismissible(
@@ -66,7 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     key: ValueKey<Listin>(listListins[index]),
                     child: ListTile(
-                     
                       onTap: () {
                         Navigator.push(
                             context,
@@ -150,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
 
                         firestore
-                            .collection("listins")
+                            .collection(uid)
                             .doc(listin.id)
                             .set(listin.toMap());
 
@@ -170,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
   refresh() async {
     List<Listin> temp = [];
     QuerySnapshot<Map<String, dynamic>> snapshot =
-        await firestore.collection("listins").get();
+        await firestore.collection(uid).get();
     for (var doc in snapshot.docs) {
       temp.add(Listin.fromMap(doc.data()));
     }
@@ -180,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void remove(Listin listListin) async {
-    firestore.collection('listins').doc(listListin.id).delete();
+    firestore.collection(uid).doc(listListin.id).delete();
     refresh();
   }
 }
